@@ -72,11 +72,18 @@ const TravelAgent = () => {
     setIsLoading(true);
 
     try {
+      console.log('Starting Gemini API call...');
       const genAI = new GoogleGenerativeAI(apiKey);
-      const model = genAI.getGenerativeModel({ model: "gemini-1.5-flash" });
+      const model = genAI.getGenerativeModel({ 
+        model: "gemini-1.5-flash",
+        generationConfig: {
+          maxOutputTokens: 1000,
+          temperature: 0.7,
+        }
+      });
 
       const context = `
-        You are a personalized travel planning AI agent. Use this information to provide tailored recommendations:
+        You are a personalized travel planning AI agent. Keep responses concise and actionable.
         
         User's Travel History: ${mockTravelHistory.map(h => `${h.destination} (${h.date}, ${h.type})`).join(', ')}
         
@@ -84,23 +91,24 @@ const TravelAgent = () => {
         - Budget: ${preferences.budget || 'Not specified'}
         - Travel Type: ${preferences.travelType || 'Not specified'}
         - Preferred Amenities: ${preferences.amenities.join(', ') || 'None specified'}
-        - Interested Destinations: ${preferences.destinations.join(', ') || 'Open to suggestions'}
         
-        Provide personalized travel recommendations considering:
-        1. Past travel patterns and preferences
-        2. Budget sensitivity and deal opportunities
-        3. Seasonal factors and trending destinations
-        4. Hotel amenities and experiences
-        5. Real-time context and mobile deals
-        6. Social signals and highly-rated places
-        7. Loyalty program benefits
-        
-        Be conversational, helpful, and provide specific actionable recommendations.
+        Provide specific, helpful travel recommendations. Keep responses under 500 words.
       `;
 
-      const result = await model.generateContent([context, input]);
-      const response = await result.response;
+      console.log('Sending request to Gemini...');
+      
+      // Add timeout to the API call
+      const timeoutPromise = new Promise((_, reject) =>
+        setTimeout(() => reject(new Error('Request timeout')), 30000)
+      );
+
+      const apiPromise = model.generateContent([context, input]);
+      
+      const result = await Promise.race([apiPromise, timeoutPromise]);
+      const response = await (result as any).response;
       const text = response.text();
+
+      console.log('Received response from Gemini');
 
       const assistantMessage: Message = {
         role: 'assistant',
@@ -110,14 +118,38 @@ const TravelAgent = () => {
 
       setMessages(prev => [...prev, assistantMessage]);
     } catch (error) {
-      console.error('Error calling Gemini API:', error);
+      console.error('Detailed error:', error);
+      
+      let errorMessage = "Failed to get response from AI. ";
+      
+      if (error instanceof Error) {
+        if (error.message.includes('timeout')) {
+          errorMessage += "Request timed out. Please try again with a shorter question.";
+        } else if (error.message.includes('API_KEY')) {
+          errorMessage += "Invalid API key. Please check your Gemini API key.";
+        } else if (error.message.includes('quota')) {
+          errorMessage += "API quota exceeded. Please check your Gemini API usage.";
+        } else {
+          errorMessage += `Error: ${error.message}`;
+        }
+      }
+      
       toast({
         title: "Error",
-        description: "Failed to get response from AI. Please check your API key.",
+        description: errorMessage,
         variant: "destructive"
       });
+      
+      // Add error message to chat
+      const errorChatMessage: Message = {
+        role: 'assistant',
+        content: `I apologize, but I encountered an error: ${errorMessage}. Please try again with a simpler question or check your API key.`,
+        timestamp: new Date()
+      };
+      setMessages(prev => [...prev, errorChatMessage]);
     } finally {
       setIsLoading(false);
+      console.log('API call completed');
     }
   };
 
