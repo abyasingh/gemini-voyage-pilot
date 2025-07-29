@@ -10,6 +10,8 @@ import { Badge } from '@/components/ui/badge';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { MapPin, Send, Loader2, Plane, Calendar, DollarSign } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
+import FlightSearch from './FlightSearch';
+import { FlightSearchParams } from '@/services/FlightService';
 
 interface Message {
   role: 'user' | 'assistant';
@@ -204,6 +206,20 @@ I'm here to help you plan amazing trips based on your preferences, budget, and t
     setInput(prompt);
   };
 
+  const handleFlightSearch = (flightData: string, searchParams: FlightSearchParams) => {
+    const flightMessage: Message = {
+      role: 'assistant',
+      content: flightData,
+      timestamp: new Date()
+    };
+    
+    setMessages(prev => [...prev, flightMessage]);
+    
+    // Auto-generate a follow-up message asking for recommendations
+    const followUpPrompt = `Based on these flight options from ${searchParams.departure} to ${searchParams.arrival}, can you recommend the best options considering my travel preferences and provide additional travel tips for this route?`;
+    setInput(followUpPrompt);
+  };
+
   return (
     <div className="max-w-7xl mx-auto p-4 space-y-6">
       {/* API Key Input */}
@@ -250,6 +266,8 @@ I'm here to help you plan amazing trips based on your preferences, budget, and t
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         {/* Travel Preferences */}
         <div className="space-y-4">
+          {/* Flight Search */}
+          <FlightSearch onFlightSearch={handleFlightSearch} />
           <Card className="bg-gradient-card shadow-card">
             <CardHeader>
               <CardTitle className="flex items-center gap-2">
