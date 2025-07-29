@@ -121,6 +121,14 @@ const TravelAgent = () => {
     }
   };
 
+  const quickPrompts = [
+    "Suggest destinations based on my preferences",
+    "Find hotels with my selected amenities",
+    "Plan a trip within my budget",
+    "What are trending destinations right now?",
+    "Recommend activities for my travel type"
+  ];
+
   const toggleAmenity = (amenity: string) => {
     setPreferences(prev => ({
       ...prev,
@@ -128,6 +136,10 @@ const TravelAgent = () => {
         ? prev.amenities.filter(a => a !== amenity)
         : [...prev.amenities, amenity]
     }));
+  };
+
+  const handleQuickPrompt = (prompt: string) => {
+    setInput(prompt);
   };
 
   return (
@@ -291,6 +303,27 @@ const TravelAgent = () => {
                   )}
                 </div>
               </ScrollArea>
+              
+              
+              {/* Quick Action Prompts */}
+              {messages.length === 1 && (
+                <div className="mb-4">
+                  <p className="text-sm text-muted-foreground mb-2">Try asking:</p>
+                  <div className="flex flex-wrap gap-2">
+                    {quickPrompts.map((prompt, index) => (
+                      <Button
+                        key={index}
+                        variant="outline"
+                        size="sm"
+                        onClick={() => handleQuickPrompt(prompt)}
+                        className="text-xs"
+                      >
+                        {prompt}
+                      </Button>
+                    ))}
+                  </div>
+                </div>
+              )}
               
               <div className="flex gap-2">
                 <Textarea
