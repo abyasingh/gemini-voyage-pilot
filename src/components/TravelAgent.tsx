@@ -1,5 +1,7 @@
 import { useState } from 'react';
 import { GoogleGenerativeAI } from '@google/generative-ai';
+import ReactMarkdown from 'react-markdown';
+import remarkGfm from 'remark-gfm';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
@@ -26,7 +28,18 @@ const TravelAgent = () => {
   const [messages, setMessages] = useState<Message[]>([
     {
       role: 'assistant',
-      content: 'Hello! I\'m your AI travel planning assistant. I can help you plan amazing trips based on your preferences, budget, and travel history. What kind of adventure are you looking for?',
+      content: `# Welcome to Your AI Travel Assistant! ✈️
+
+I'm here to help you plan amazing trips based on your preferences, budget, and travel history. 
+
+## What I can help you with:
+- **🏖️ Destination recommendations** based on your travel style
+- **🏨 Hotel suggestions** with your preferred amenities  
+- **💰 Budget-friendly options** and deals
+- **📅 Trip planning** for business or leisure
+- **🌟 Trending destinations** and hidden gems
+
+**Get started by setting your preferences on the left, then ask me anything about travel!**`,
       timestamp: new Date()
     }
   ]);
@@ -83,7 +96,15 @@ const TravelAgent = () => {
       });
 
       const context = `
-        You are a personalized travel planning AI agent. Keep responses concise and actionable.
+        You are a personalized travel planning AI agent. ALWAYS format your responses using markdown syntax for better readability.
+
+        Use these markdown formatting guidelines:
+        - Use # for main headings, ## for subheadings
+        - Use **bold** for important information
+        - Use bullet points with - or *
+        - Use numbered lists when appropriate
+        - Use > for important tips or quotes
+        - Use \`code\` for specific terms or prices
         
         User's Travel History: ${mockTravelHistory.map(h => `${h.destination} (${h.date}, ${h.type})`).join(', ')}
         
@@ -92,7 +113,7 @@ const TravelAgent = () => {
         - Travel Type: ${preferences.travelType || 'Not specified'}
         - Preferred Amenities: ${preferences.amenities.join(', ') || 'None specified'}
         
-        Provide specific, helpful travel recommendations. Keep responses under 500 words.
+        Provide specific, helpful travel recommendations formatted in markdown. Keep responses under 500 words.
       `;
 
       console.log('Sending request to Gemini...');
@@ -143,7 +164,16 @@ const TravelAgent = () => {
       // Add error message to chat
       const errorChatMessage: Message = {
         role: 'assistant',
-        content: `I apologize, but I encountered an error: ${errorMessage}. Please try again with a simpler question or check your API key.`,
+        content: `## ⚠️ Error Occurred
+
+**${errorMessage}**
+
+> Please try again with a simpler question or check your API key.
+
+### Quick troubleshooting:
+- Verify your Gemini API key is correct
+- Check your internet connection  
+- Try a shorter, more specific question`,
         timestamp: new Date()
       };
       setMessages(prev => [...prev, errorChatMessage]);
@@ -319,7 +349,29 @@ const TravelAgent = () => {
                             : 'bg-muted'
                         }`}
                       >
-                        <p className="text-sm whitespace-pre-wrap">{message.content}</p>
+                        {message.role === 'user' ? (
+                          <p className="text-sm whitespace-pre-wrap">{message.content}</p>
+                        ) : (
+                          <div className="text-sm prose prose-sm max-w-none">
+                            <ReactMarkdown 
+                              remarkPlugins={[remarkGfm]}
+                              components={{
+                                h1: ({children}) => <h1 className="text-lg font-bold mb-2 text-foreground">{children}</h1>,
+                                h2: ({children}) => <h2 className="text-base font-semibold mb-2 text-foreground">{children}</h2>,
+                                h3: ({children}) => <h3 className="text-sm font-medium mb-1 text-foreground">{children}</h3>,
+                                p: ({children}) => <p className="mb-2 text-foreground">{children}</p>,
+                                ul: ({children}) => <ul className="mb-2 ml-4 list-disc text-foreground">{children}</ul>,
+                                ol: ({children}) => <ol className="mb-2 ml-4 list-decimal text-foreground">{children}</ol>,
+                                li: ({children}) => <li className="mb-1 text-foreground">{children}</li>,
+                                strong: ({children}) => <strong className="font-semibold text-primary">{children}</strong>,
+                                code: ({children}) => <code className="bg-accent px-1 py-0.5 rounded text-xs text-accent-foreground">{children}</code>,
+                                blockquote: ({children}) => <blockquote className="border-l-4 border-primary pl-3 my-2 italic text-muted-foreground">{children}</blockquote>,
+                              }}
+                            >
+                              {message.content}
+                            </ReactMarkdown>
+                          </div>
+                        )}
                         <p className="text-xs mt-1 opacity-70">
                           {message.timestamp.toLocaleTimeString()}
                         </p>
